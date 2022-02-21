@@ -1,0 +1,120 @@
+- name: Install Docker for Ubuntu
+  block:
+    - name: Add an Apt signing key, uses whichever key is at the URL
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Install everything docker needs
+      package:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg2
+          - pass
+          - software-properties-common
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - unzip
+          - python3-pip
+        state: latest
+        update_cache: yes
+      register: result
+      until: result is success
+      retries: 5
+      delay: 60
+
+  rescue:
+    - name: Download directly for Yakkety (16.10)
+      apt:
+        deb: https://download.docker.com/linux/ubuntu/dists/yakkety/pool/stable/amd64/docker-ce_17.06.0~ce-0~ubuntu_amd64.deb
+        state: present
+      when: ansible_distribution_version == '16.10'
+    - name: Install different list of things Docker needs, 17.04/17.10 (Zesty/Artful) fix
+      package:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg2
+          - software-properties-common
+          - docker-ce
+          - unzip
+        state: latest
+        update_cache: yes
+      register: result
+      until: result is success
+      retries: 5
+      delay: 60
+      when: ansible_distribution_version == '17.04' or ansible_distribution_version == '17.10'
+    - name: No fixes available for this release
+      fail: 
+        msg: No fixes available for this release
+      when: 
+        - ansible_distribution_version!='16.10'
+        - ansible_distribution_version!='17.04'
+        - ansible_distribution_version!='17.10'
+  when: ansible_distribution=="Ubuntu"
+
+- name: Fail if not able to install Docker
+  fail:
+    msg: "Cannot install Docker on {{ ansible_distribution }}"
+  when: ansible_distribution!="Ubuntu"
+
+- name: Create Docker directories [if not exists]
+  file:
+    path: "{{ item }}"
+    state: directory
+  with_items:
+    - /etc/docker/
+    - /etc/systemd/system/docker.service.d/
+
+- name: Create Docker directories all docker users can read
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: docker
+    mode: 0750
+  with_items:
+    - /opt/docker
+    - /opt/docker/certs
+
+- name: Deploy daemon.json to /etc/docker/
+  copy:
+    src: ../templates/daemon.json.j2
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Deploy override.conf to /etc/systemd/system/docker.service.d/
+  template:
+    src: override.conf.j2
+    dest: /etc/systemd/system/docker.service.d/override.conf
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Install /etc/profile.d/ script for setting DOCKER TLS VERIFY env vars for all users
+  template:
+    src: "{{ role_path }}/templates/docker_env.sh.j2"
+    dest: "/etc/profile.d/docker_env.sh"
+    mode: 0755
+
+- name: Conifigure $USER to have permission to run docker
+  user:
+    name: "{{ item }}"
+    groups: docker
+    append: yes
+  with_items:
+    - "{{ demo_username }}"
+    - "{{ ansible_user_id }}"
+    - "{{ ansible_ssh_user | default('root') }}"
+    - "{{ ssh_user_id | default('root') }}"
+    - "{{ ansible_user | default('root') }}"
+
+- name: Reset ssh connection to allow user changes to affect 'current login user'
+  meta: reset_connection

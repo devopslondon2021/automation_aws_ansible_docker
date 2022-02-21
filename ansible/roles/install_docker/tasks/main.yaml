@@ -1,0 +1,20 @@
+- name: Update the machine
+  command: sudo apt-get clean && update -y
+  
+- name: Installing essentials
+  command: apt-get install apt-transport-https gnupg lsb-release ca-certificates curl software-properties-common -y
+
+- name: Installing docker
+  command: apt install docker.io -y
+
+- name: Adding user to group
+  command: sudo usermod -aG docker ${USER}
+
+- name: Restarting docker service
+  command: sudo service docker restart 
+
+- name: Updating the machine 2
+  command: sudo apt-get update
+
+- name: Installing Python Pip
+  command: sudo apt-get install python-pip python-dev build-essential -y

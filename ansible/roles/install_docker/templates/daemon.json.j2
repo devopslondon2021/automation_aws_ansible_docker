@@ -1,0 +1,13 @@
+{
+	"log-level": "info",
+	"log-driver": "syslog",
+	"log-opts": {
+		"tag": "docker{{.Name}}"
+	},
+	"storage-driver": "overlay2",
+	"tlsverify": true,
+	"tlscacert": "/etc/docker/certs/ca.pem",
+	"tlscert": "/etc/docker/certs/server-cert.pem",
+	"tlskey": "/etc/docker/certs/server-key.pem",
+	"icc": false
+}
