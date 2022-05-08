@@ -1,6 +1,6 @@
-# Sapient hiring challenge 
+# Automation challenge 
 
-This repo has the solution of the chellenges given as homework, and has end-to-end automated solutions. 
+Automation for infrastruture deployment, containerize app, and deploying. 
 
 # Directory structure 
 - `.github/workflows/build_docker_and_deploy.yaml` - Github actions file that is responsible to build the docker image and push to ECR
